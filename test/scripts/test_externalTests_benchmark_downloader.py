@@ -31,7 +31,7 @@ def _git_run_command_mock(command):
         "If you have updated the code, please remember to add matching command fixtures above."
     )
 
-def _requests_get_mock(url, params, timeout):
+def _requests_get_mock(url, params, headers, timeout):
     response_mock = Mock()
 
     if url == 'https://api.github.com/repos/ethereum/solidity/pulls/12818':

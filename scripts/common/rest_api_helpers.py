@@ -1,3 +1,4 @@
+from os import environ
 from pathlib import Path
 from typing import List, Mapping, Optional
 import functools
@@ -42,13 +43,13 @@ class FileAlreadyExists(APIHelperError):
     pass
 
 
-def query_api(url: str, params: Mapping[str, str], debug_requests=False) -> dict:
+def query_api(url: str, params: Mapping[str, str], headers: dict, debug_requests=False) -> dict:
     if debug_requests:
         print(f'REQUEST URL: {url}')
         if len(params) > 0:
             print(f'QUERY: {params}')
 
-    response = requests.get(url, params=params, timeout=60)
+    response = requests.get(url, params=params, headers=headers, timeout=60)
     response.raise_for_status()
 
     if debug_requests:
@@ -83,9 +84,12 @@ class Github:
         self.debug_requests = debug_requests
 
     def pull_request(self, pr_id: int) -> dict:
+        auth_header = {'Authorization': 'Bearer ' + str(environ.get('GITHUB_TOKEN'))}
+        headers = auth_header if 'GITHUB_TOKEN' in environ else {}
         return query_api(
             f'{self.BASE_URL}/repos/{self.project_slug}/pulls/{pr_id}',
             {},
+            headers,
             self.debug_requests
         )
 
@@ -108,11 +112,13 @@ class CircleCI:
 
         page_count = 0
         next_page_token = None
+        auth_header = {'Circle-Token': str(environ.get('CIRCLECI_TOKEN'))}
+        headers = auth_header if 'CIRCLECI_TOKEN' in environ else {}
         while max_pages is None or page_count < max_pages:
             if next_page_token is not None:
                 params = {**params, 'page-token': next_page_token}
 
-            json_response = query_api(url, params, self.debug_requests)
+            json_response = query_api(url, params, headers, self.debug_requests)
 
             yield json_response['items']
             next_page_token = json_response['next_page_token']
